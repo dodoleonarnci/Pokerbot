@@ -41,6 +41,17 @@ time, zero errors or illegal actions, and identical decisions to the original pa
 same random numbers. Decision time p50 0.2 ms, p99 ~0.45 ms against a 1 ms limit; memory
 ~1.5 KB typical, ~2 KB max.
 
+### Layered engine and variant seam (added 2026-11-06 afternoon)
+
+`bot/kit.py` `play` now runs layers in order: safety (0.4 ms budget, fallback check/fold/
+automatic), extra decisions (`decide_<kind>` hooks on the active `VariantSpec` in
+`bot/variant.py`), rules (`bot/rules.py`, flags in `PARAMS["RULES"]`), the hold'em policy, and
+a generic equity engine (`bot/generic.py`) for variants the policy cannot play or when it
+raises. Each decision is counted by layer. `sim/ab.py` A/B-tests settings on identical
+seeds; `tests/test_layers.py` covers the hooks, rules, adapter, fallback and latency. The
+event-day runbook and the list of every place a variant touches are in the bot's own
+`~/work/first_bot/README.md`, where Codex/Astra will read them at the event.
+
 ### Assumptions to verify against the real SDK
 
 - Seat numbers increase clockwise; `seats[i].stack` excludes the chips in `seats[i].bet`;
@@ -78,6 +89,43 @@ in the round or team data, like the kit's `links.download`. Fallback: download i
 browser and `scp` to the build machine. When building tables, exclude our own bot's seat
 (it is named in the histories), or the field's averages will include our own play.
 
+### Reading opponents' bets in the Bay Area variant (added 2026-11-06, build phase)
+
+The variant (`~/work/starter-kit/RULES.md`) is hold'em with three hole cards. After the
+flop, every player still in chooses at the same time which card to discard face down and
+which of the other two to expose. So after the flop each opponent has one hidden card, about
+45 possibilities, and the discard is never shown, not even at showdown. A Gamemaster
+confirmed at the event that agents other than Codex may be used during the build.
+
+Judging bets from showdown hands alone is biased, because which hands reach showdown depends
+on how they were played. `offline/pineapple_em/` on the build machine fits the population
+instead, using standard library plus NumPy:
+
+- `em.py` holds the fit. For each opponent it treats the hidden card as unknown and learns
+  two things together. The first is a betting model: how likely each action is, given the
+  opponent's hand bucket (air, weak draw, strong draw, weak pair, top pair, strong) and the
+  spot. The second is a selection model: given the card they exposed and the flop, how
+  likely each hidden card is, which captures how players choose what to keep and show. Hands
+  shown at showdown count as fully known. `hidden_card_posterior` is the play-time Bayes
+  step: the probability of each possible hidden card, given the exposed card, the flop, the
+  observer's own three cards and the actions so far.
+- `world.py` is a heads-up synthetic version of the variant with a known population.
+  `run_synthetic.py` fits three ways and scores each against the truth: EM on realistic
+  visibility, showdown hands only (the naive method), and full visibility (the best
+  possible).
+
+Results (40k training hands, 20k test hands, 41 s on the build machine): EM recovers the
+betting policy almost as well as full visibility. Its "is the bettor behind me on the flop"
+probability is calibrated to within about 1 point. The showdown-only fit under-calls bluffs
+by 3–5 points in the decision range (predicted 15–40% bluff) in the base world, and by 7
+points in a world where bluffs fire again on later streets (`--world barreling`). Ignoring
+the betting model and only counting cards is far worse (log loss 0.49 against 0.37). The
+posterior costs about 0.1 ms per call with NumPy on the build machine.
+
+Still needed before it can run on real histories: a converter from the official hand-history
+format (events `select`, `reveal`, `show`; our own cards in the private record) to
+`em.Observation`, with spot and action ids for 8-handed play (raises, multiway, sizes).
+
 ## Kit-day checklist
 
 1. Rerun `/no-limit-2026-setup` on a small model; it installs the kit on the build machine.
@@ -86,3 +134,65 @@ browser and `scp` to the build machine. When building tables, exclude our own bo
    upload folder (`kit_agent.py` as `agent.py`, `bot/`, `data/`) and run `poker-agent check`,
    `poker-agent play` and `poker-agent pack`.
 4. Upload (once every 30 s per team); the upload test match has no time bank.
+
+## Bay Area variant bot (event night, 2026-11-06)
+
+The variant was "flop discard and reveal": three hole cards, normal preflop betting, then on
+the flop every player discards one card and exposes one of the two they keep. The kit's table
+rules differ from the rules PDF: blinds rise every 20 hands, the cap is 250 hands, and places
+pay 50/30/20 by default (the bot reads `state.config.payouts`, since a round may change it).
+
+The event bot is a fresh single-file agent, not the layered `first_bot`: `~/work/dr_bot2` on
+the build machine (`agent.py` plus `preflop3.json`). `~/work/dr_bot` is the first upload, kept
+as-is. The preflop table was built by `~/work/dr_offline/build_preflop.py`, which simulates
+all 1,755 distinct three-card hands (5,000 trials each) and stores a strength percentile,
+equity against a random hand, and equity against the top 20% of hands.
+
+- Preflop: open, push/fold and calling thresholds by position and stack depth, tightened near
+  the money; calls of all-ins compare estimated equity with the ICM break-even equity.
+- Flop selection: keeps the pair of cards with the best simulated equity on that flop, then
+  exposes the stronger kept card half the time (the "strong branch") and the weaker one
+  otherwise; pocket pairs hide the card that carries a flush draw.
+- Postflop: bet/raise probability by branch and hand class (two pair or better, top pair or
+  overpair, weaker pair, high card), with a bonus for draws.
+
+Uploads go to `POST /api/teams/<team>/submissions?filename=…` with the zip as the body; the
+status is in `GET /api/teams/<team>/submissions` (`items[].status`, `ready` when its test
+match passes). Both uploads reached `ready`; `dr_bot2.zip` is the active bot for T1. Decision
+time on the build machine: worst case about 0.33 ms.
+
+### Aggressiveness factor and round data (version 3)
+
+`~/work/dr_bot3` is `dr_bot2` plus one aggressiveness factor per table, in [0, 1). The bot
+sets it at its first decision at a table, as a SHA-256 hash of that hand's number and its
+sorted dealt cards, and keeps it in memory. The postflop bet/raise probabilities are scaled
+by 0.4–1.6×, preflop open and 3-bet widths by 0.7–1.3×, short-stack shove widths by
+0.85–1.15×. Every decision still rolls its own dice. Calls, including ICM all-in calls, don't
+change. A factor of 0.5 plays like `dr_bot2`.
+
+Memory is not in hand histories, so the factor is rebuilt from what is:
+`~/work/dr_offline/aggression_data.py HISTORY OUT_PREFIX` finds the first hand where our seat
+made a decision that wasn't automatic, recomputes the factor, and writes `-tables.csv` (factor,
+points, raise share, action counts) and `-hands.csv` (factor, branch, chip change, showdown,
+action counts). In a 150-table local test, raise share by factor third was 18% / 24% / 29%.
+
+Hand histories download from `GET /api/teams/<team>/tournaments/<tournament>/hands`; rounds
+are listed at `GET /api/competitions/<competition>/tournaments`. The download script is
+`~/work/fetch_history.py` (same copy in the session scratchpad); it must run on the Mac,
+where the API key is. The event clock (`/api/competitions/<c>/redzone`) put the end of the
+Bay Area build phase at 7:21 PM PT.
+
+### Leak map: where opponents fold or bluff too much (event night)
+
+`offline/pineapple_em/` also turns participant hand histories into game-tree statistics.
+`history.py` replays each hand's events into decisions at abstract spots (street, heads-up or
+multiway, the actor's role, lead/after-a-check/facing-a-bet, bet size as a share of the pot).
+`tree.py` computes, for opponents only, how often a bet makes everyone fold against its
+break-even rate, river bluff shares from called bets (always shown) against the balanced
+rate, EM-corrected flop and turn hand mixes, and the heads-up postflop game tree.
+`report.py FILES --out summary.json` runs it all (75k hands in about 23 s on the build
+machine), and `export_rows.py` writes the row files the "Bot leak map" dashboard reads
+(https://claude.ai/artifact/MPfnJ5kUQKmZTJAhgqFMHh). The first version shows a 600-table
+local practice round (`~/work/hh/practice_*.jsonl.gz`: our two uploads, the kit's examples
+and two deliberately leaky stand-ins in `~/work/sim_bots`). The competition API exposes no
+hand-history link, so a real round's file has to come from the round page.
