@@ -1,0 +1,420 @@
+<meta name="dash-one-writer">
+<style>
+  .lk-page { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); }
+  .lk-head { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .lk-title { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); text-wrap: balance; }
+  .lk-lede { margin: 0; max-width: 72ch; font-size: var(--cds-font-size-body); line-height: 1.5; }
+  .lk-meta { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .lk-page b { font-weight: 600; }
+  .lk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--cds-gap-md); }
+  .lk-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
+  .lk-card h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+  .lk-note { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.45; max-width: 80ch; }
+  .lk-chart { position: relative; min-height: 340px; }
+  .lk-chart.lk-tall { min-height: 560px; }
+  .lk-chart svg { display: block; overflow: visible; }
+  .lk-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); max-width: 280px; z-index: 2; line-height: 1.4; }
+  .lk-tip-head { color: var(--cds-text-secondary); margin-bottom: 2px; }
+  .lk-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .lk-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .lk-swatch.lk-bar { border-radius: 2px; }
+  .lk-table-wrap { max-height: 440px; overflow: auto; }
+  .lk-table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .lk-table th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .lk-table td { padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+  .lk-table .lk-num { text-align: right; white-space: nowrap; }
+  .lk-details { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); max-width: 80ch; line-height: 1.5; }
+  .lk-details summary { cursor: pointer; color: var(--color-fg); }
+  .lk-details dt { color: var(--color-fg); margin-top: var(--cds-gap-sm); }
+  .lk-details dd { margin: 0; }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="lk-page">
+  <header class="lk-head">
+    <h1 class="lk-title" id="top">Bot leak map</h1>
+    <p class="lk-lede">Across <b data-draw="hands" data-source="summary" data-field="hands" data-row="0">—</b> hands, the most exploitable spot is <b data-draw="top-label" data-source="vulnerable" data-field="label" data-row="0">—</b>. Play: <b data-draw="top-play" data-source="vulnerable" data-field="play" data-row="0">—</b>, worth about <b data-draw="top-value" data-source="vulnerable" data-field="value_per_1000" data-row="0">—</b> pots per 1,000 hands.</p>
+    <p class="lk-meta">Data: <span data-draw="source-label" data-source="summary" data-field="label" data-row="0">—</span>. Opponents only: our own bot and filler seats are left out of every rate.</p>
+  </header>
+
+  <section class="lk-card" id="leaks">
+    <h2>Most exploitable spots</h2>
+    <p class="lk-note">Profit per spot, in pots, times how often the spot comes up. Bluffing spots use how often every opponent folds to a bet. River spots use the hands that were called and shown down.</p>
+    <div class="lk-legend">
+      <span><i class="lk-swatch lk-bar" data-color="0"></i>Folds too often: bluff</span>
+      <span><i class="lk-swatch lk-bar" data-color="1"></i>Bluffs too often: call</span>
+      <span><i class="lk-swatch lk-bar" data-color="2"></i>Bluffs too rarely: fold</span>
+    </div>
+    <div class="lk-chart" data-draw="leaks" data-source="vulnerable">—</div>
+  </section>
+
+  <div class="lk-grid">
+    <section class="lk-card" id="folding">
+      <h2>Where they fold too much</h2>
+      <p class="lk-note">Each dot is a betting spot: how often everyone folded to the bet. Above the line, a bet with no hand at all makes money on folds alone.</p>
+      <div class="lk-legend">
+        <span><i class="lk-swatch" data-color="0"></i>Flop</span>
+        <span><i class="lk-swatch" data-color="1"></i>Turn</span>
+        <span><i class="lk-swatch" data-color="2"></i>River</span>
+      </div>
+      <div class="lk-chart" data-draw="fold-scatter" data-source="spots">—</div>
+    </section>
+    <section class="lk-card" id="bluffing">
+      <h2>Where they bluff too much</h2>
+      <p class="lk-note">River bets that were called and shown down: the share made with no pair from their own cards. Above the line, calling with any hand that beats a bluff makes money.</p>
+      <div class="lk-legend">
+        <span><i class="lk-swatch" data-color="0"></i>Heads-up</span>
+        <span><i class="lk-swatch" data-color="3"></i>Multiway</span>
+      </div>
+      <div class="lk-chart" data-draw="bluff-scatter" data-source="river">—</div>
+    </section>
+  </div>
+
+  <section class="lk-card" id="em">
+    <h2>Flop and turn bluff share: showdowns alone vs EM</h2>
+    <p class="lk-note">Share of bets made with air or a weak draw. Flop and turn bluffs often win before showdown, so counting only shown hands misses them. EM uses every hand's whole line to correct for that.</p>
+    <div class="lk-legend">
+      <span><i class="lk-swatch lk-bar" data-color="0"></i>EM estimate</span>
+      <span><i class="lk-swatch lk-bar" data-muted="1"></i>Shown hands only</span>
+    </div>
+    <div class="lk-chart" data-draw="em-bars" data-source="earlier">—</div>
+  </section>
+
+  <section class="lk-card" id="tree">
+    <h2>Heads-up game tree after the flop</h2>
+    <p class="lk-note">Left to right is the order of play, and each block's height is how often the line happens. Color is the best pure-bluff profit available at that point. The more saturated the color, the more a bet with nothing wins or loses. Lines seen fewer than 30 times are left out.</p>
+    <div class="lk-legend">
+      <span><i class="lk-swatch lk-bar" data-color="0"></i>Bluffing profits</span>
+      <span><i class="lk-swatch lk-bar" data-muted="1"></i>Break-even or no bets</span>
+      <span><i class="lk-swatch lk-bar" data-color="1"></i>Bluffing loses</span>
+    </div>
+    <div class="lk-chart lk-tall" data-draw="tree" data-source="hu_tree">—</div>
+  </section>
+
+  <section class="lk-card" id="table">
+    <h2>Spot list</h2>
+    <p class="lk-note">The same spots as the top chart, with sample sizes.</p>
+    <div class="lk-table-wrap">
+      <table class="lk-table" data-source="vulnerable" data-row-key="key">
+        <thead>
+          <tr>
+            <th data-field="label">Spot</th>
+            <th data-field="leak">Leak</th>
+            <th data-field="play">Play</th>
+            <th class="lk-num" data-field="ev_per_spot">Pots per spot</th>
+            <th class="lk-num" data-field="per_1000_hands">Per 1,000 hands</th>
+            <th class="lk-num" data-field="value_per_1000">Pots per 1,000 hands</th>
+            <th class="lk-num" data-field="n">Sample</th>
+          </tr>
+        </thead>
+        <tbody data-draw="leak-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="lk-details">
+    <summary>How these numbers are worked out</summary>
+    <dl>
+      <dt>Spot</dt>
+      <dd>Street, heads-up or multiway, the bettor's role (raiser or caller before the flop, or what they did on the last street), whether they lead or bet after a check, and the bet's size as a share of the pot.</dd>
+      <dt>Folds too often</dt>
+      <dd>A bet of size s (as a share of the pot) with no hand breaks even when everyone folds s / (1 + s) of the time, a third for a half-pot bet. Above that, the profit per spot is the fold rate minus s times the call-or-raise rate, in pots.</dd>
+      <dt>Bluffs too often or too rarely</dt>
+      <dd>On the river a bet of size s is balanced when s / (1 + 2s) of the bets are bluffs, a quarter for a half-pot bet. A called river bet always reaches showdown, so those hands show the whole betting range. "Bluff" here means no pair made with their own cards. The value is what a hand that beats every bluff and loses to every value bet gains by calling (too many bluffs) or by folding (too few).</dd>
+      <dt>EM estimate</dt>
+      <dd>On the flop and turn, most bets never reach showdown. The estimate fits how opponents bet with each kind of hand, using every hand they played and each one's exposed card, and works out each bettor's most likely hidden card.</dd>
+      <dt>What's left out</dt>
+      <dd>Preflop spots, spots seen fewer than 30 times (10 for river showdowns), and our own bot's decisions. Folding bluff-catchers is valued as if we would always have called there, so that figure is an upper bound.</dd>
+    </dl>
+  </details>
+</div>
+
+<script>
+  dash.calc('vulnerable', {
+    title: 'Most exploitable spots',
+    description: 'Bluffing profit where opponents fold too much, and river bluff-catching gains, each times how often the spot comes up.',
+    inputs: ['spots', 'river'],
+    fn: (spots, river) => {
+      const roles = {PFA: 'raiser', caller: 'caller', limped: 'limped pot', agg: 'bet last street', def: 'called last street', checked: 'checked last street'};
+      const moves = {first: 'leads', 'checked-to': 'bets after a check', 'vs-bet': 'raises a bet', 'vs-raise': 're-raises'};
+      const name = (r) => [r.street[0].toUpperCase() + r.street.slice(1), r.players === 'HU' ? 'heads-up' : 'multiway',
+        roles[r.role] || r.role, moves[r.situation] || r.situation, r.bet_size].join(' · ');
+      const often = Object.fromEntries(spots.map((s) => [s.spot, s.per_1000_hands]));
+      const rows = spots.filter((s) => s.bluff_ev_pots > 0).map((s) => ({
+        key: 'fold|' + s.spot, label: name(s), leak: 'Folds too often', play: 'Bluff with any hand',
+        ev_per_spot: s.bluff_ev_pots, per_1000_hands: s.per_1000_hands, value_per_1000: s.bluff_ev_pots * s.per_1000_hands, n: s.n}));
+      for (const r of river) {
+        const over = r.bluffcatch_ev_pots > 0;
+        const f = often[r.spot] ?? 0;
+        rows.push({key: 'river|' + r.spot, label: name(r), leak: over ? 'Bluffs too often' : 'Bluffs too rarely',
+          play: over ? 'Call with bluff-catchers' : 'Fold bluff-catchers', ev_per_spot: Math.abs(r.bluffcatch_ev_pots),
+          per_1000_hands: f, value_per_1000: Math.abs(r.bluffcatch_ev_pots) * f, n: r.n});
+      }
+      return rows.sort((a, b) => b.value_per_1000 - a.value_per_1000).slice(0, 20);
+    },
+  });
+</script>
+
+<script>
+  window.lkKit = (() => {
+    const pct = d3.format('.0%');
+    const pct1 = d3.format('.1%');
+    const pots = d3.format('+.2f');
+    const comma = d3.format(',');
+    const two = d3.format('.2f');
+    const cssVar = (el, name) => getComputedStyle(el).getPropertyValue(name).trim();
+    const placeholder = (el) => { el.replaceChildren(); el.textContent = '—'; };
+    const tip = (el) => {
+      const box = document.createElement('div');
+      box.className = 'lk-tip';
+      box.hidden = true;
+      el.appendChild(box);
+      return {
+        show(event, head, lines) {
+          box.replaceChildren();
+          const h = document.createElement('div');
+          h.className = 'lk-tip-head';
+          h.textContent = head;
+          box.appendChild(h);
+          for (const line of lines) {
+            const d = document.createElement('div');
+            d.textContent = line;
+            box.appendChild(d);
+          }
+          box.hidden = false;
+          const rect = el.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          const w = box.offsetWidth;
+          const h2 = box.offsetHeight;
+          box.style.left = Math.max(0, Math.min(rect.width - w, x + 12)) + 'px';
+          box.style.top = Math.max(0, Math.min(rect.height - h2, y - h2 - 10 < 0 ? y + 14 : y - h2 - 10)) + 'px';
+        },
+        hide() { box.hidden = true; },
+      };
+    };
+    const streetColor = {flop: 0, turn: 1, river: 2};
+    const leakColor = {'Folds too often': 0, 'Bluffs too often': 1, 'Bluffs too rarely': 2};
+    const axisStyle = (g, el) => {
+      g.attr('font-size', null).attr('font-family', null);
+      g.selectAll('text').attr('fill', cssVar(el, '--color-fg-muted')).style('font-size', 'var(--cds-font-size-caption)');
+      g.selectAll('line').attr('stroke', cssVar(el, '--cds-chart-grid'));
+      g.select('.domain').attr('stroke', cssVar(el, '--cds-chart-axis'));
+    };
+    return {pct, pct1, pots, comma, two, cssVar, placeholder, tip, streetColor, leakColor, axisStyle};
+  })();
+
+  for (const swatch of document.querySelectorAll('.lk-swatch[data-color]')) {
+    swatch.style.background = dash.colors[Number(swatch.dataset.color)];
+  }
+  for (const swatch of document.querySelectorAll('.lk-swatch[data-muted]')) {
+    swatch.style.background = 'var(--cds-chart-muted)';
+  }
+</script>
+
+<script>
+  const {pct, pct1, pots, comma, two, cssVar, placeholder, tip, streetColor, leakColor, axisStyle} = window.lkKit;
+
+  const firstRow = (id) => {
+    const g = dash.data(id);
+    return g.status === 'ok' && g.data.length ? g.data[0] : null;
+  };
+  dash.draw('hands', (el) => { const r = firstRow('summary'); el.textContent = r ? comma(r.hands) : '—'; });
+  dash.draw('source-label', (el) => { const r = firstRow('summary'); el.textContent = r ? r.label : '—'; });
+  dash.draw('top-label', (el) => { const r = firstRow('vulnerable'); el.textContent = r ? r.label : '—'; });
+  dash.draw('top-play', (el) => { const r = firstRow('vulnerable'); el.textContent = r ? r.play.toLowerCase() : '—'; });
+  dash.draw('top-value', (el) => { const r = firstRow('vulnerable'); el.textContent = r ? two(r.value_per_1000) : '—'; });
+
+  dash.draw('leaks', (el) => {
+    const g = dash.data('vulnerable');
+    if (g.status !== 'ok' || !g.data.length) return placeholder(el);
+    el.replaceChildren();
+    const rows = g.data.slice(0, 12);
+    const width = Math.max(320, el.clientWidth);
+    const rowH = 42;
+    const height = rows.length * rowH + 8;
+    const valueRoom = 56;
+    const x = d3.scaleLinear([0, d3.max(rows, (r) => r.value_per_1000) || 1], [0, width - valueRoom]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const t = tip(el);
+    const fg = cssVar(el, '--color-fg');
+    const muted = cssVar(el, '--color-fg-muted');
+    const row = svg.selectAll('g').data(rows).join('g').attr('transform', (_, i) => `translate(0,${i * rowH})`);
+    row.append('text').attr('x', 0).attr('y', 13).attr('fill', fg).style('font-size', 'var(--cds-font-size-caption)')
+      .text((r) => r.label);
+    row.append('rect').attr('x', 0).attr('y', 20).attr('height', 14).attr('rx', 3)
+      .attr('width', (r) => Math.max(2, x(r.value_per_1000)))
+      .attr('fill', (r) => dash.colors[leakColor[r.leak] ?? 0]);
+    row.append('text').attr('x', (r) => Math.max(2, x(r.value_per_1000)) + 6).attr('y', 31).attr('fill', muted)
+      .style('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums')
+      .text((r) => two(r.value_per_1000));
+    row.append('rect').attr('x', 0).attr('y', 0).attr('width', width).attr('height', rowH).attr('fill', 'transparent')
+      .on('mousemove', (event, r) => t.show(event, r.label, [
+        `${r.leak}: ${r.play.toLowerCase()}`,
+        `${pots(r.ev_per_spot)} pots per spot`,
+        `Comes up ${two(r.per_1000_hands)} times per 1,000 hands`,
+        `${two(r.value_per_1000)} pots per 1,000 hands`,
+        `Sample: ${comma(r.n)}`]))
+      .on('mouseleave', () => t.hide());
+  });
+
+  const scatter = (el, rows, opts) => {
+    el.replaceChildren();
+    const width = Math.max(300, el.clientWidth);
+    const height = 340;
+    const m = {top: 12, right: 14, bottom: 40, left: 44};
+    const xMax = Math.min(3, Math.max(1.3, d3.max(rows, (r) => r.mean_size) || 1));
+    const x = d3.scaleLinear([0, xMax], [m.left, width - m.right]);
+    const y = d3.scaleLinear([0, 1], [height - m.bottom, m.top]);
+    const r = d3.scaleSqrt([0, d3.max(rows, (d) => d.n) || 1], [3, 11]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const curve = d3.range(0, xMax + 0.001, xMax / 80).map((s) => [s, opts.line(s)]);
+    const zone = d3.area().x((d) => x(d[0])).y0((d) => y(d[1])).y1(y(1));
+    svg.append('path').datum(curve).attr('d', zone).attr('fill', cssVar(el, '--cds-chart-grid')).attr('opacity', 0.6);
+    svg.append('g').attr('transform', `translate(0,${height - m.bottom})`)
+      .call(d3.axisBottom(x).ticks(Math.max(3, Math.floor(width / 90))).tickFormat(pct).tickSize(-(height - m.top - m.bottom)))
+      .call((g) => axisStyle(g, el));
+    svg.append('g').attr('transform', `translate(${m.left},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickFormat(pct).tickSize(-(width - m.left - m.right)))
+      .call((g) => axisStyle(g, el));
+    svg.append('path').datum(curve).attr('d', d3.line().x((d) => x(d[0])).y((d) => y(d[1])))
+      .attr('fill', 'none').attr('stroke', cssVar(el, '--cds-chart-reference')).attr('stroke-width', 2).attr('stroke-dasharray', '6 4');
+    svg.append('text').attr('x', m.left + 8).attr('y', m.top + 14).attr('fill', cssVar(el, '--color-fg-muted'))
+      .style('font-size', 'var(--cds-font-size-caption)').text(opts.zoneLabel);
+    svg.append('text').attr('x', width - m.right).attr('y', height - 6).attr('text-anchor', 'end')
+      .attr('fill', cssVar(el, '--color-fg-muted')).style('font-size', 'var(--cds-font-size-caption)').text('Bet size, share of the pot');
+    const t = tip(el);
+    const ring = cssVar(el, '--color-panel');
+    svg.append('g').selectAll('circle').data(rows.slice().sort((a, b) => b.n - a.n)).join('circle')
+      .attr('cx', (d) => x(Math.min(xMax, d.mean_size))).attr('cy', (d) => y(opts.value(d))).attr('r', (d) => r(d.n))
+      .attr('fill', (d) => dash.colors[opts.color(d)]).attr('fill-opacity', 0.85).attr('stroke', ring).attr('stroke-width', 2)
+      .on('mousemove', (event, d) => t.show(event, opts.title(d), opts.lines(d)))
+      .on('mouseleave', () => t.hide());
+  };
+
+  const spotTitle = (d) => [d.street[0].toUpperCase() + d.street.slice(1), d.players === 'HU' ? 'heads-up' : 'multiway',
+    d.role, d.situation, d.bet_size].join(' · ');
+
+  dash.draw('fold-scatter', (el) => {
+    const g = dash.data('spots');
+    if (g.status !== 'ok' || !g.data.length) return placeholder(el);
+    scatter(el, g.data, {
+      line: (s) => s / (1 + s), value: (d) => d.fold_through, color: (d) => streetColor[d.street] ?? 0,
+      zoneLabel: 'Bluffs profit above the line', title: spotTitle,
+      lines: (d) => [`Everyone folded ${pct1(d.fold_through)} (break-even ${pct1(d.breakeven)})`,
+        `Pure bluff: ${pots(d.bluff_ev_pots)} pots per bet`, `Average size ${pct(d.mean_size)} of the pot`, `Sample: ${comma(d.n)} bets`],
+    });
+  });
+
+  dash.draw('bluff-scatter', (el) => {
+    const g = dash.data('river');
+    if (g.status !== 'ok' || !g.data.length) return placeholder(el);
+    scatter(el, g.data, {
+      line: (s) => s / (1 + 2 * s), value: (d) => d.air_share, color: (d) => (d.players === 'HU' ? 0 : 3),
+      zoneLabel: 'Too many bluffs above the line', title: spotTitle,
+      lines: (d) => [`No pair: ${pct1(d.air_share)} (balanced ${pct1(d.balanced)})`,
+        `Caller won ${pct1(d.caller_won)} of showdowns`, `Calling a bluff-catcher: ${pots(d.bluffcatch_ev_pots)} pots`,
+        `Sample: ${comma(d.n)} called bets`],
+    });
+  });
+
+  dash.draw('em-bars', (el) => {
+    const g = dash.data('earlier');
+    if (g.status !== 'ok') return placeholder(el);
+    const rows = g.data.filter((d) => d.em_n >= 100 && d.shown_n >= 10 && d.em_bluff != null && d.shown_bluff != null)
+      .sort((a, b) => b.em_n - a.em_n).slice(0, 10);
+    if (!rows.length) return placeholder(el);
+    el.replaceChildren();
+    const width = Math.max(320, el.clientWidth);
+    const rowH = 50;
+    const height = rows.length * rowH + 24;
+    const x = d3.scaleLinear([0, 1], [0, width - 52]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const t = tip(el);
+    const fg = cssVar(el, '--color-fg');
+    const muted = cssVar(el, '--color-fg-muted');
+    const grey = cssVar(el, '--cds-chart-muted');
+    const row = svg.selectAll('g').data(rows).join('g').attr('transform', (_, i) => `translate(0,${i * rowH})`);
+    row.append('text').attr('y', 12).attr('fill', fg).style('font-size', 'var(--cds-font-size-caption)').text(spotTitle);
+    for (const [i, key, color] of [[0, 'em_bluff', dash.colors[0]], [1, 'shown_bluff', grey]]) {
+      row.append('rect').attr('y', 18 + i * 13).attr('height', 11).attr('rx', 3)
+        .attr('width', (d) => Math.max(2, x(d[key]))).attr('fill', color);
+      row.append('text').attr('x', (d) => Math.max(2, x(d[key])) + 6).attr('y', 27 + i * 13).attr('fill', muted)
+        .style('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums').text((d) => pct(d[key]));
+    }
+    row.append('rect').attr('width', width).attr('height', rowH).attr('fill', 'transparent')
+      .on('mousemove', (event, d) => t.show(event, spotTitle(d), [
+        `EM: ${pct1(d.em_bluff)} air or weak draw (${comma(d.em_n)} bets)`,
+        `Shown hands only: ${pct1(d.shown_bluff)} (${comma(d.shown_n)} shown)`,
+        `EM mix: ${pct(d.em_air)} air, ${pct(d.em_weak_draw)} weak draw, ${pct(d.em_strong_draw)} strong draw, ${pct(d.em_weak_pair)} weak pair, ${pct(d.em_top_pair)} top pair, ${pct(d.em_strong)} two pair or better`]))
+      .on('mouseleave', () => t.hide());
+  });
+
+  dash.draw('tree', (el) => {
+    const g = dash.data('hu_tree');
+    if (g.status !== 'ok' || !g.data.length) return placeholder(el);
+    el.replaceChildren();
+    const rows = [{id: '__all', parent: null, label: 'Heads-up pots', count: 0}, ...g.data.map((d) => ({...d, parent: d.parent || '__all'}))];
+    const childSum = d3.rollup(rows.filter((d) => d.parent), (v) => d3.sum(v, (d) => d.count), (d) => d.parent);
+    const root = d3.stratify().id((d) => d.id).parentId((d) => d.parent)(rows)
+      .sum((d) => Math.max(0, d.count - (childSum.get(d.id) || 0)))
+      .sort((a, b) => b.value - a.value);
+    const depth = root.height;
+    const width = Math.max(320, el.clientWidth);
+    const height = 560;
+    const column = width / depth;
+    d3.partition().size([height, width + column])(root);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const t = tip(el);
+    const grey = cssVar(el, '--cds-chart-muted');
+    const good = d3.interpolateRgb(grey, dash.colors[0]);
+    const bad = d3.interpolateRgb(grey, dash.colors[1]);
+    const fill = (d) => {
+      const ev = d.data.best_bluff_ev;
+      if (ev == null) return grey;
+      return ev >= 0 ? good(Math.min(1, ev / 0.5)) : bad(Math.min(1, -ev / 0.5));
+    };
+    const fg = cssVar(el, '--color-fg');
+    const panel = cssVar(el, '--color-panel');
+    const nodes = root.descendants().filter((d) => d.depth > 0);
+    const cell = svg.selectAll('g').data(nodes).join('g').attr('transform', (d) => `translate(${d.y0 - column},${d.x0})`);
+    cell.append('rect').attr('width', (d) => Math.max(0, d.y1 - d.y0 - 2)).attr('height', (d) => Math.max(0, d.x1 - d.x0 - 2))
+      .attr('rx', 3).attr('fill', fill).attr('stroke', panel).attr('stroke-width', 0)
+      .on('mousemove', (event, d) => {
+        const r = d.data;
+        const shares = ['check', 'bet', 'call', 'fold', 'raise'].filter((k) => r[k] > 0).map((k) => `${k} ${pct(r[k])}`).join(', ');
+        const path = d.ancestors().reverse().slice(1).map((a) => a.data.label);
+        t.show(event, path.join(' → '), [
+          `Next: ${r.actor} acts, ${comma(r.count)} times`, shares ? `Does: ${shares}` : 'No decisions recorded',
+          r.best_bet_size ? `Best bluff: ${r.best_bet_size} bet, everyone folds ${pct1(r.best_fold_through)}, ${pots(r.best_bluff_ev)} pots (${comma(r.best_bets_n)} bets)` : 'Too few bets here to rate a bluff']);
+      })
+      .on('mouseleave', () => t.hide());
+    cell.filter((d) => d.x1 - d.x0 >= 16 && d.y1 - d.y0 >= 70).append('text')
+      .attr('x', 6).attr('y', 13).attr('fill', fg).style('font-size', 'var(--cds-font-size-caption)').style('pointer-events', 'none')
+      .text((d) => {
+        const room = Math.floor((d.y1 - d.y0 - 12) / 6.4);
+        const label = d.data.label;
+        return label.length > room ? label.slice(0, Math.max(1, room - 1)) + '…' : label;
+      });
+  });
+
+  dash.draw('leak-rows', (tbody) => {
+    const g = dash.data('vulnerable');
+    tbody.replaceChildren();
+    if (g.status !== 'ok') return;
+    for (const r of g.data) {
+      const tr = document.createElement('tr');
+      tr.dataset.key = r.key;
+      const cells = [[r.label, ''], [r.leak, ''], [r.play, ''], [pots(r.ev_per_spot), 'lk-num'],
+        [two(r.per_1000_hands), 'lk-num'], [two(r.value_per_1000), 'lk-num'], [comma(r.n), 'lk-num']];
+      for (const [text, cls] of cells) {
+        const td = document.createElement('td');
+        td.textContent = text;
+        if (cls) td.className = cls;
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  });
+</script>

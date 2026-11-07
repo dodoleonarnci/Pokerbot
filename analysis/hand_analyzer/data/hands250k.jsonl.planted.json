@@ -1,0 +1,74 @@
+{
+ "bet": {
+  "air": 0.15,
+  "draw": 0.35,
+  "strong": 0.75,
+  "top": 0.55,
+  "weak": 0.25
+ },
+ "bet_sizes": {
+  "L": [
+   0.15,
+   1.0
+  ],
+  "M": [
+   0.4,
+   0.6
+  ],
+  "O": [
+   0.05,
+   1.5
+  ],
+  "S": [
+   0.4,
+   0.33
+  ]
+ },
+ "call_open": 0.2,
+ "fold_big": {
+  "air": 0.85,
+  "draw": 0.55,
+  "strong": 0.05,
+  "top": 0.3,
+  "weak": 0.7
+ },
+ "fold_small": {
+  "air": 0.55,
+  "draw": 0.25,
+  "strong": 0.02,
+  "top": 0.1,
+  "weak": 0.35
+ },
+ "hidden_cards": 0.05,
+ "keep_best": 0.9,
+ "limp": 0.05,
+ "open": {
+  "BTN": 0.36,
+  "CO": 0.27,
+  "HJ": 0.21,
+  "LJ": 0.17,
+  "SB": 0.3,
+  "UTG": 0.12,
+  "UTG+1": 0.14
+ },
+ "raise_vs_bet": {
+  "air": 0.0,
+  "draw": 0.06,
+  "strong": 0.25,
+  "top": 0.04,
+  "weak": 0.0
+ },
+ "show_helper": 0.6,
+ "three_bet": 0.08,
+ "turn_leak_fold": 0.8,
+ "vs_3bet": {
+  "call": 0.35,
+  "fold": 0.55,
+  "raise": 0.1
+ },
+ "vs_4bet": {
+  "call": 0.5,
+  "fold": 0.45,
+  "raise": 0.05
+ }
+}

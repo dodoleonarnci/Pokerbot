@@ -1,0 +1,114 @@
+{
+  "seed": "22",
+  "tables": 300,
+  "bots": {
+    "dr_bot2#0": {
+      "average_points": 24.667,
+      "places": {
+        "1": 117,
+        "2": 43,
+        "3": 13,
+        "4": 23,
+        "5": 36,
+        "6": 35,
+        "7": 27,
+        "8": 6
+      },
+      "failed_decisions": 57
+    },
+    "dr_bot#1": {
+      "average_points": 26.3,
+      "places": {
+        "1": 130,
+        "2": 37,
+        "3": 14,
+        "4": 19,
+        "5": 32,
+        "6": 36,
+        "7": 24,
+        "8": 8
+      },
+      "failed_decisions": 126
+    },
+    "overbluffer#2": {
+      "average_points": 3.133,
+      "places": {
+        "1": 14,
+        "2": 6,
+        "3": 3,
+        "4": 18,
+        "5": 37,
+        "6": 85,
+        "7": 87,
+        "8": 50
+      },
+      "failed_decisions": 25
+    },
+    "overfolder#3": {
+      "average_points": 10.833,
+      "places": {
+        "1": 8,
+        "2": 65,
+        "3": 45,
+        "4": 88,
+        "5": 66,
+        "6": 15,
+        "7": 11,
+        "8": 2
+      },
+      "failed_decisions": 70
+    },
+    "min_raiser#4": {
+      "average_points": 1.267,
+      "places": {
+        "1": 5,
+        "2": 3,
+        "3": 2,
+        "4": 5,
+        "5": 24,
+        "6": 44,
+        "7": 81,
+        "8": 136
+      },
+      "failed_decisions": 11
+    },
+    "check_or_fold#5": {
+      "average_points": 18.3,
+      "places": {
+        "2": 81,
+        "3": 153,
+        "4": 64,
+        "5": 2
+      },
+      "failed_decisions": 43
+    },
+    "overbluffer#6": {
+      "average_points": 4.467,
+      "places": {
+        "1": 21,
+        "2": 7,
+        "3": 4,
+        "4": 17,
+        "5": 46,
+        "6": 77,
+        "7": 81,
+        "8": 47
+      },
+      "failed_decisions": 55
+    },
+    "overfolder#7": {
+      "average_points": 11.033,
+      "places": {
+        "1": 5,
+        "2": 58,
+        "3": 66,
+        "4": 70,
+        "5": 62,
+        "6": 25,
+        "7": 12,
+        "8": 2
+      },
+      "failed_decisions": 37
+    }
+  }
+}

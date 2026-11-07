@@ -1,0 +1,46 @@
+# First bot: rehearsal build
+
+Built from `No_Limit_Pokerbot_First_Bot_Build_Spec.md`, against a practice simulator, because the
+starter kit is not available yet. The bot makes every decision from lookups and closed-form formulas.
+
+## Layout
+
+| Path | What it is |
+| --- | --- |
+| `agent.py` | M1 safety shell and entry point |
+| `bot/view.py` | M2 state adapter: a new kit interface changes this file |
+| `bot/evaluator.py` | M3 hand ranking: replace with the kit's evaluator if it is fast enough |
+| `bot/tables.py`, `bot/features.py` | M4 table loading, draw outs and hand keys |
+| `bot/policy.py` | M5 strategy, S1 to S10 |
+| `bot/params.py` | All tunable numbers, the assumed payouts and the assumed blind schedule |
+| `bot/icm.py` | M6 ICM values, chart lookups and the risk penalty |
+| `bot/opponent.py`, `bot/spots.py` | M7 pool tables, per-seat layer and spot keys |
+| `offline/build_tables.py` | Builds the M3 and M4 data files |
+| `offline/build_icm.py` | Solves the M6 jam/fold charts |
+| `offline/pipeline.py` | M8: collect, build, resolve, check, ship |
+| `offline/gates.py` | The spec's testing gates |
+| `sim/` | Practice stand-in for the kit's simulator, plus practice bots |
+
+## Commands
+
+Run these from this folder.
+
+```bash
+python3.12 offline/build_tables.py
+offline/.venv/bin/python offline/build_icm.py
+python3.12 -m unittest discover -s tests
+python3.12 offline/pipeline.py collect --tables 300 --round round0
+python3.12 offline/pipeline.py build --round round0
+python3.12 offline/pipeline.py resolve
+python3.12 offline/pipeline.py check --tables 2000
+python3.12 offline/gates.py 200 500 2000
+python3.12 offline/pipeline.py ship --with-pool
+```
+
+## Replace once the kit is available
+
+- `bot/view.py`: the kit's state fields and return format
+- `bot/evaluator.py` and `offline/build_tables.py`: the kit's evaluator and engine
+- `bot/params.py`: `PAYOUTS` and `BLIND_LEVELS`, which are assumed
+- `offline/pipeline.py`: `parse_hand`, for the kit's hand-history format
+- `sim/`: the kit's simulator, for all gates; `poker-agent check` for the Legal gate

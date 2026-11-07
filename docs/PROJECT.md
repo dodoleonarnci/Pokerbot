@@ -9,11 +9,19 @@ A bot for the NO LIMIT '26 tournament: a Python `Agent` whose `act(state, memory
 ## Where things live
 
 - **Build machine** (`ssh no-limit-2026-build`, user `ubuntu`, 54.91.36.158): an EC2 box set
-  up like the tournament's machines. Code is in `~/work`.
-  - `~/work/first_bot` — the team's bot (standard library only). `bot/` is the strategy,
-    `data/` its precomputed tables, `sim/` a practice tournament, `offline/` the table builders.
-  - `~/work/practice` — a stand-in hold'em engine, used until the official kit exists.
-  - `~/work/first_bot.bak-20261106` — backup taken before the kit-interface work.
+  up like the tournament's machines. Code is in `~/work`, grouped by purpose since event night
+  (full map and rules in `~/work/REFACTOR.md`):
+  - `~/work/bots/` — every uploadable bot (`dr_bot`…`dr_bot4`, each with its zip).
+  - `~/work/analysis/` — hand histories, `fetch_history.py`, `hand_analyzer/`, `pineapple_em/`,
+    `dr_offline/` (preflop table builder, aggression CSVs), `preflop_ranking/`, and the dashboard
+    sources in `visualization/`.
+  - `~/work/sim/` — practice opponents (`sim_bots/`), `timing.py`, `dr_timed/`.
+  - `~/work/legacy/` — the pre-event `first_bot` (layered hold'em bot), its backup, and `practice/`.
+  - `~/work/starter-kit/` — the official kit, unmoved. Old top-level paths remain as temporary symlinks.
+- **Local mirror**: `bots/`, `analysis/`, `sim/`, `legacy/` and `REFACTOR.md` in this folder are a
+  git-tracked copy of the build machine's `~/work` (no venvs, no files over 5 MB, no `first_bot`
+  backup). The build machine stays the place to work; pull it down at checkpoints with
+  `rsync -a --max-size=5m --exclude=.venv --exclude=__pycache__ --exclude=first_bot.bak-20261106 --exclude=times.log no-limit-2026-build:work/{bots,analysis,sim,legacy,REFACTOR.md} .`
 - **This computer**: API key in `~/.config/no-limit-2026/api-key`; SSH alias in `~/.ssh/config`
   using `~/.ssh/runpod`; setup skill at `~/.claude/skills/no-limit-2026-setup/SKILL.md`.
 
@@ -50,7 +58,7 @@ a generic equity engine (`bot/generic.py`) for variants the policy cannot play o
 raises. Each decision is counted by layer. `sim/ab.py` A/B-tests settings on identical
 seeds; `tests/test_layers.py` covers the hooks, rules, adapter, fallback and latency. The
 event-day runbook and the list of every place a variant touches are in the bot's own
-`~/work/first_bot/README.md`, where Codex/Astra will read them at the event.
+`~/work/legacy/first_bot/README.md`, where Codex/Astra will read them at the event.
 
 ### Assumptions to verify against the real SDK
 
@@ -98,7 +106,7 @@ which of the other two to expose. So after the flop each opponent has one hidden
 confirmed at the event that agents other than Codex may be used during the build.
 
 Judging bets from showdown hands alone is biased, because which hands reach showdown depends
-on how they were played. `offline/pineapple_em/` on the build machine fits the population
+on how they were played. `~/work/analysis/pineapple_em/` (formerly in `first_bot/offline/`) fits the population
 instead, using standard library plus NumPy:
 
 - `em.py` holds the fit. For each opponent it treats the hidden card as unknown and learns
@@ -142,9 +150,9 @@ the flop every player discards one card and exposes one of the two they keep. Th
 rules differ from the rules PDF: blinds rise every 20 hands, the cap is 250 hands, and places
 pay 50/30/20 by default (the bot reads `state.config.payouts`, since a round may change it).
 
-The event bot is a fresh single-file agent, not the layered `first_bot`: `~/work/dr_bot2` on
-the build machine (`agent.py` plus `preflop3.json`). `~/work/dr_bot` is the first upload, kept
-as-is. The preflop table was built by `~/work/dr_offline/build_preflop.py`, which simulates
+The event bot is a fresh single-file agent, not the layered `first_bot`: `~/work/bots/dr_bot2` on
+the build machine (`agent.py` plus `preflop3.json`). `~/work/bots/dr_bot` is the first upload, kept
+as-is. The preflop table was built by `~/work/analysis/dr_offline/build_preflop.py`, which simulates
 all 1,755 distinct three-card hands (5,000 trials each) and stores a strength percentile,
 equity against a random hand, and equity against the top 20% of hands.
 
@@ -163,7 +171,7 @@ time on the build machine: worst case about 0.33 ms.
 
 ### Aggressiveness factor and round data (version 3)
 
-`~/work/dr_bot3` is `dr_bot2` plus one aggressiveness factor per table, in [0, 1). The bot
+`~/work/bots/dr_bot3` is `dr_bot2` plus one aggressiveness factor per table, in [0, 1). The bot
 sets it at its first decision at a table, as a SHA-256 hash of that hand's number and its
 sorted dealt cards, and keeps it in memory. The postflop bet/raise probabilities are scaled
 by 0.4–1.6×, preflop open and 3-bet widths by 0.7–1.3×, short-stack shove widths by
@@ -171,20 +179,20 @@ by 0.4–1.6×, preflop open and 3-bet widths by 0.7–1.3×, short-stack shove 
 change. A factor of 0.5 plays like `dr_bot2`.
 
 Memory is not in hand histories, so the factor is rebuilt from what is:
-`~/work/dr_offline/aggression_data.py HISTORY OUT_PREFIX` finds the first hand where our seat
+`~/work/analysis/dr_offline/aggression_data.py HISTORY OUT_PREFIX` finds the first hand where our seat
 made a decision that wasn't automatic, recomputes the factor, and writes `-tables.csv` (factor,
 points, raise share, action counts) and `-hands.csv` (factor, branch, chip change, showdown,
 action counts). In a 150-table local test, raise share by factor third was 18% / 24% / 29%.
 
 Hand histories download from `GET /api/teams/<team>/tournaments/<tournament>/hands`; rounds
 are listed at `GET /api/competitions/<competition>/tournaments`. The download script is
-`~/work/fetch_history.py` (same copy in the session scratchpad); it must run on the Mac,
+`~/work/analysis/fetch_history.py` (same copy in the session scratchpad); it must run on the Mac,
 where the API key is. The event clock (`/api/competitions/<c>/redzone`) put the end of the
 Bay Area build phase at 7:21 PM PT.
 
 ### Leak map: where opponents fold or bluff too much (event night)
 
-`offline/pineapple_em/` also turns participant hand histories into game-tree statistics.
+`~/work/analysis/pineapple_em/` also turns participant hand histories into game-tree statistics.
 `history.py` replays each hand's events into decisions at abstract spots (street, heads-up or
 multiway, the actor's role, lead/after-a-check/facing-a-bet, bet size as a share of the pot).
 `tree.py` computes, for opponents only, how often a bet makes everyone fold against its
@@ -193,6 +201,6 @@ rate, EM-corrected flop and turn hand mixes, and the heads-up postflop game tree
 `report.py FILES --out summary.json` runs it all (75k hands in about 23 s on the build
 machine), and `export_rows.py` writes the row files the "Bot leak map" dashboard reads
 (https://claude.ai/artifact/MPfnJ5kUQKmZTJAhgqFMHh). The first version shows a 600-table
-local practice round (`~/work/hh/practice_*.jsonl.gz`: our two uploads, the kit's examples
-and two deliberately leaky stand-ins in `~/work/sim_bots`). The competition API exposes no
+local practice round (`~/work/analysis/hh/practice_*.jsonl.gz`: our two uploads, the kit's examples
+and two deliberately leaky stand-ins in `~/work/sim/sim_bots`). The competition API exposes no
 hand-history link, so a real round's file has to come from the round page.

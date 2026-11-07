@@ -1,0 +1,791 @@
+<title>Three-Card Preflop Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one controls bar over a wide 3D viewport, with a readout column to its right that stacks below on phones */
+:root {
+  --bg: #f2f4f6;
+  --surface: #ffffff;
+  --ink: #14171a;
+  --ink-2: #4a525b;
+  --muted: #6f7882;
+  --line: #dce1e6;
+  --grid: #c3cbd3;
+  --axis: #8a939d;
+  --ghost: #d2d8de;
+  --accent: #eb6834;
+  --seq-0: #b7d3f6; --seq-1: #86b6ef; --seq-2: #5598e7; --seq-3: #2a78d6;
+  --seq-4: #1c5cab; --seq-5: #104281; --seq-6: #0d366b;
+  --font-ui: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1113; --surface: #171a1d; --ink: #eceef1; --ink-2: #b6bdc5; --muted: #8b949e;
+    --line: #2a2f35; --grid: #353c44; --axis: #6c757f; --ghost: #2f353c; --accent: #f07a48;
+    --seq-0: #184f95; --seq-1: #256abf; --seq-2: #3987e5; --seq-3: #5598e7;
+    --seq-4: #86b6ef; --seq-5: #b7d3f6; --seq-6: #cde2fb;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1113; --surface: #171a1d; --ink: #eceef1; --ink-2: #b6bdc5; --muted: #8b949e;
+  --line: #2a2f35; --grid: #353c44; --axis: #6c757f; --ghost: #2f353c; --accent: #f07a48;
+  --seq-0: #184f95; --seq-1: #256abf; --seq-2: #3987e5; --seq-3: #5598e7;
+  --seq-4: #86b6ef; --seq-5: #b7d3f6; --seq-6: #cde2fb;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.page { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; }
+
+header { display: grid; gap: 6px; }
+.eyebrow {
+  font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  font-size: clamp(26px, 4vw, 38px); line-height: 1.1; margin: 0; font-weight: 650;
+  font-stretch: 82%; letter-spacing: -0.01em; text-wrap: balance;
+}
+.lede { margin: 0; color: var(--ink-2); max-width: 68ch; }
+
+.controls {
+  display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: end;
+  padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.field { display: grid; gap: 5px; min-width: 0; }
+.field > label, .field > .label {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted);
+}
+select {
+  font: inherit; font-size: 14px; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; max-width: 100%;
+}
+.range-field { flex: 1 1 300px; }
+.range-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+input[type="range"] { flex: 1 1 140px; accent-color: var(--seq-3); min-width: 120px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip, .button {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); cursor: pointer;
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; font-variant-numeric: tabular-nums;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.button { border-radius: 8px; padding: 7px 12px; }
+:is(select, .chip, .button, input, .viewport, .top-list button, summary):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 920px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.viewport {
+  position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  height: min(640px, 72vh); min-height: 380px; overflow: hidden; touch-action: none; cursor: grab;
+}
+.viewport.dragging { cursor: grabbing; }
+.viewport canvas { display: block; width: 100%; height: 100%; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+.tick, .axis-title {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
+  font-family: var(--font-data); font-size: 11px; color: var(--muted);
+}
+.axis-title { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; }
+.hint {
+  position: absolute; left: 12px; bottom: 10px; font-size: 12px; color: var(--muted); pointer-events: none;
+}
+.tooltip {
+  position: absolute; pointer-events: none; z-index: 2; min-width: 170px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.14); padding: 8px 10px; font-size: 13px;
+}
+.tooltip .hand { font-family: var(--font-data); font-weight: 500; font-size: 15px; }
+.tooltip .row { display: flex; justify-content: space-between; gap: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tooltip .row b { color: var(--ink); font-weight: 500; font-family: var(--font-data); }
+.fallback {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--ink-2);
+}
+
+.readout { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 10px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+.legend-bar {
+  height: 12px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--seq-0), var(--seq-1), var(--seq-2), var(--seq-3), var(--seq-4), var(--seq-5), var(--seq-6));
+}
+.legend-ticks { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend-note { margin: 0; font-size: 13px; color: var(--ink-2); }
+.coverage { font-size: 13px; color: var(--ink-2); margin: 0; font-variant-numeric: tabular-nums; }
+.coverage b { color: var(--ink); font-weight: 600; }
+
+.detail-hand { font-family: var(--font-data); font-size: 26px; font-weight: 500; line-height: 1.1; letter-spacing: 0.02em; }
+.detail-kind { margin: 0; color: var(--ink-2); font-size: 13px; }
+.mini { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.mini th { text-align: right; font-weight: 600; color: var(--muted); font-size: 11px; padding: 0 0 4px; }
+.mini th:first-child, .mini td:first-child { text-align: left; }
+.mini td { text-align: right; padding: 4px 0; border-top: 1px solid var(--line); font-family: var(--font-data); }
+.mini td:first-child { font-family: var(--font-data); white-space: nowrap; padding-right: 8px; }
+.mini tr.current td { color: var(--ink); font-weight: 500; }
+.mini tr:not(.current) td { color: var(--ink-2); }
+.mini .metric-col { color: var(--ink) !important; }
+
+.top-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.top-list button {
+  width: 100%; display: grid; grid-template-columns: 1.6em 1fr auto; gap: 8px; align-items: baseline;
+  font: inherit; font-size: 13.5px; color: var(--ink); background: none; border: 0; border-radius: 6px;
+  padding: 4px 6px; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.top-list button:hover { background: var(--bg); }
+.top-list .rank { color: var(--muted); font-family: var(--font-data); font-size: 12px; }
+.top-list .hand { font-family: var(--font-data); }
+.top-list .val { font-family: var(--font-data); color: var(--ink-2); }
+
+details.table-view { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
+details.table-view summary { cursor: pointer; font-weight: 600; }
+.table-scroll { overflow: auto; max-height: 480px; margin-top: 10px; }
+.full { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.full th { position: sticky; top: 0; background: var(--surface); text-align: right; font-size: 11px; font-weight: 600; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.full td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--line); font-family: var(--font-data); color: var(--ink-2); }
+.full th:nth-child(-n+2), .full td:nth-child(-n+2) { text-align: left; }
+.full td:nth-child(2) { color: var(--ink); }
+
+.method { color: var(--ink-2); font-size: 13.5px; max-width: 78ch; display: grid; gap: 8px; }
+.method h2 { margin: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.method p { margin: 0; }
+code { font-family: var(--font-data); font-size: 0.92em; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Bay Area variant · three hole cards · preflop table</div>
+    <h1>Three-Card Preflop Map</h1>
+    <p class="lede">Every starting hand of three cards, placed by its top, middle and bottom card and colored by how often it wins at showdown. This is the naive table the event bot reads (<code>preflop3.json</code>): each player keeps the best two cards for the flop and plays to the river with no betting.</p>
+  </header>
+
+  <section class="controls" aria-label="Chart controls">
+    <div class="field">
+      <label for="metric">Measure</label>
+      <select id="metric">
+        <option value="eqr">Equity against a random hand</option>
+        <option value="eqt">Equity against the top 20% of hands</option>
+        <option value="pct">Strength percentile</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="pattern">Suit pattern</label>
+      <select id="pattern"></select>
+    </div>
+    <div class="field range-field">
+      <label for="share">Range shown</label>
+      <div class="range-row">
+        <input id="share" type="range" min="1" max="100" step="1" value="100" aria-describedby="coverage">
+        <div class="chips" role="group" aria-label="Range presets">
+          <button class="chip" type="button" data-share="100">All</button>
+          <button class="chip" type="button" data-share="50">50%</button>
+          <button class="chip" type="button" data-share="30">30%</button>
+          <button class="chip" type="button" data-share="20">20%</button>
+          <button class="chip" type="button" data-share="10">10%</button>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">View</span>
+      <button class="button" type="button" id="reset">Reset view</button>
+    </div>
+  </section>
+
+  <div class="main">
+    <div class="viewport" id="viewport" tabindex="0" role="region"
+         aria-label="3D lattice of three-card starting hands. Arrow keys rotate, plus and minus zoom. The table below lists the same values.">
+      <div class="labels" id="labels"></div>
+      <div class="tooltip" id="tooltip" hidden></div>
+      <div class="hint" id="hint">Drag to rotate · scroll or pinch to zoom · click a point for detail</div>
+    </div>
+
+    <aside class="readout">
+      <section class="panel" aria-labelledby="legend-title">
+        <h2 id="legend-title">Color</h2>
+        <div class="legend-bar" aria-hidden="true"></div>
+        <div class="legend-ticks" id="legend-ticks"></div>
+        <p class="legend-note" id="legend-note"></p>
+        <p class="coverage" id="coverage"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="detail-title" aria-live="polite">
+        <h2 id="detail-title">Selected hand</h2>
+        <div class="detail-hand" id="detail-hand"></div>
+        <p class="detail-kind" id="detail-kind"></p>
+        <table class="mini" id="detail-table"></table>
+      </section>
+
+      <section class="panel" aria-labelledby="top-title">
+        <h2 id="top-title">Strongest in this view</h2>
+        <ol class="top-list" id="top-list"></ol>
+      </section>
+    </aside>
+  </div>
+
+  <details class="table-view">
+    <summary>All 455 rank combinations as a table</summary>
+    <div class="table-scroll"><table class="full" id="full-table"></table></div>
+  </details>
+
+  <section class="method">
+    <h2>How the table was built</h2>
+    <p><code>~/work/dr_offline/build_preflop.py</code> deals each of the 1,755 distinct three-card hands 5,000 times against one random three-card hand, and 2,500 times against a hand from the top 20%. On the flop both players keep whichever two cards make the stronger hand right then, the board runs out, and the better five-card hand wins. Nobody bets or folds, and the exposed card is ignored.</p>
+    <p>Strength percentile ranks hands by equity against a random hand, weighted by how many card combinations each one has (22,100 in all). With 5,000 deals the standard error of an equity is about 0.7 points (1 point against the top 20%), so nearby hands that differ by less than that are tied.</p>
+  </section>
+</div>
+
+<script id="hand-data" type="application/json">__DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var RANKS = "23456789TJQKA";
+  var RANK_NAMES = ["Twos", "Threes", "Fours", "Fives", "Sixes", "Sevens", "Eights", "Nines", "Tens", "Jacks", "Queens", "Kings", "Aces"];
+  var RANK_ONE = ["Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King", "Ace"];
+  var ROWS = JSON.parse(document.getElementById("hand-data").textContent);
+
+  var METRICS = {
+    eqr: { index: 1, name: "equity vs random", fmt: pct1 },
+    eqt: { index: 2, name: "equity vs top 20%", fmt: pct1 },
+    pct: { index: 0, name: "percentile", fmt: topShare }
+  };
+  var PATTERNS = [
+    { id: "avg", label: "All patterns, weighted by combos", suits: null },
+    { id: "r", label: "Rainbow", suits: ["♠", "♥", "♦"] },
+    { id: "hm", label: "Top two suited", suits: ["♠", "♠", "♥"] },
+    { id: "hl", label: "Top and bottom suited", suits: ["♠", "♥", "♠"] },
+    { id: "ml", label: "Bottom two suited", suits: ["♥", "♠", "♠"] },
+    { id: "s", label: "All three suited", suits: ["♠", "♠", "♠"] }
+  ];
+  var PATTERN_BY_ID = {};
+  PATTERNS.forEach(function (p) { PATTERN_BY_ID[p.id] = p; });
+
+  var state = { metric: "eqr", pattern: "avg", share: 100, selected: null, hovered: null };
+
+  function pct1(v) { return (v * 100).toFixed(1) + "%"; }
+  function topShare(v) {
+    var top = (1 - v) * 100;
+    return "top " + (top < 0.1 ? top.toFixed(2) : top.toFixed(1)) + "%";
+  }
+  function handText(row, patternId) {
+    var suits = PATTERN_BY_ID[patternId].suits;
+    return [row[0], row[1], row[2]].map(function (r, i) {
+      return RANKS[r] + (suits ? suits[i] : "");
+    }).join(" ");
+  }
+  function handKind(row) {
+    var h = row[0], m = row[1], l = row[2];
+    if (h === m && m === l) return "Three " + RANK_NAMES[h].toLowerCase() + ": one is discarded, so it plays as a pair with no set to hit";
+    if (h === m) return "Pair of " + RANK_NAMES[h].toLowerCase() + " with a " + RANK_ONE[l].toLowerCase();
+    if (m === l) return "Pair of " + RANK_NAMES[m].toLowerCase() + " with a " + RANK_ONE[h].toLowerCase();
+    return RANK_ONE[h] + "-high, three different ranks";
+  }
+  function value(row, patternId, metricId) {
+    var cell = row[3][patternId];
+    return cell ? cell[METRICS[metricId].index] : null;
+  }
+
+  // ---- Domain, ranking and range share ------------------------------------------
+  var DOMAIN = {};
+  Object.keys(METRICS).forEach(function (id) {
+    var lo = Infinity, hi = -Infinity;
+    ROWS.forEach(function (row) {
+      Object.keys(row[3]).forEach(function (p) {
+        var v = row[3][p][METRICS[id].index];
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      });
+    });
+    DOMAIN[id] = [lo, hi];
+  });
+
+  function ranked() {
+    var list = [];
+    ROWS.forEach(function (row, i) {
+      var cell = row[3][state.pattern];
+      if (cell) list.push({ i: i, v: cell[METRICS[state.metric].index], n: cell[3] });
+    });
+    list.sort(function (a, b) { return b.v - a.v; });
+    return list;
+  }
+
+  function visibility(list) {
+    var total = list.reduce(function (s, x) { return s + x.n; }, 0);
+    var target = total * state.share / 100;
+    var shown = {}, combos = 0, cutoff = null, count = 0;
+    for (var k = 0; k < list.length; k++) {
+      if (state.share < 100 && combos >= target - 1e-9) break;
+      shown[list[k].i] = true;
+      combos += list[k].n;
+      cutoff = list[k].v;
+      count++;
+    }
+    return { shown: shown, combos: combos, total: total, cutoff: cutoff, count: count };
+  }
+
+  // ---- Colors from the theme tokens -------------------------------------------------
+  var tokens = {};
+  function readTokens() {
+    var cs = getComputedStyle(document.documentElement);
+    ["--surface", "--grid", "--axis", "--ghost", "--accent", "--ink"].forEach(function (name) {
+      tokens[name] = cs.getPropertyValue(name).trim();
+    });
+    tokens.ramp = [0, 1, 2, 3, 4, 5, 6].map(function (k) { return hexToRgb(cs.getPropertyValue("--seq-" + k).trim()); });
+  }
+  function hexToRgb(hex) {
+    var h = hex.replace("#", "");
+    if (h.length === 3) h = h.split("").map(function (c) { return c + c; }).join("");
+    var n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function rampColor(t) {
+    var stops = tokens.ramp, seg = stops.length - 1;
+    t = Math.max(0, Math.min(1, t));
+    var x = t * seg, k = Math.min(seg - 1, Math.floor(x)), f = x - k;
+    var a = stops[k], b = stops[k + 1];
+    return [0, 1, 2].map(function (c) { return (a[c] + (b[c] - a[c]) * f) / 255; });
+  }
+
+  // ---- Controls ----------------------------------------------------------------------
+  var metricSel = document.getElementById("metric");
+  var patternSel = document.getElementById("pattern");
+  var shareInput = document.getElementById("share");
+  var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  PATTERNS.forEach(function (p) {
+    var opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.suits ? p.label + "  (K" + p.suits[0] + " Q" + p.suits[1] + " 7" + p.suits[2] + ")" : p.label;
+    patternSel.appendChild(opt);
+  });
+  metricSel.addEventListener("change", function () { state.metric = metricSel.value; update(); });
+  patternSel.addEventListener("change", function () { state.pattern = patternSel.value; update(); });
+  shareInput.addEventListener("input", function () { state.share = +shareInput.value; update(); });
+  chips.forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      state.share = +chip.getAttribute("data-share");
+      shareInput.value = state.share;
+      update();
+    });
+  });
+
+  // ---- Readout panels ------------------------------------------------------------------
+  function renderLegend(vis) {
+    var d = DOMAIN[state.metric], m = METRICS[state.metric];
+    var ticks = [d[0], (d[0] + d[1]) / 2, d[1]];
+    document.getElementById("legend-ticks").innerHTML = ticks.map(function (v) {
+      return "<span>" + m.fmt(v) + "</span>";
+    }).join("");
+    document.getElementById("legend-note").textContent =
+      state.metric === "pct"
+        ? "Darker means a stronger hand. The scale is fixed across suit patterns, so colors compare directly."
+        : "Darker means the hand wins more often. The scale is fixed across suit patterns, so colors compare directly.";
+    var share = vis.total ? (100 * vis.combos / vis.total) : 0;
+    var scope = state.pattern === "avg" ? "all 22,100 hands" : "hands with this suit pattern";
+    var cut = vis.cutoff == null ? "" : state.share < 100 ? " Cutoff: " + m.fmt(vis.cutoff) + "." : "";
+    document.getElementById("coverage").innerHTML =
+      "Showing <b>" + vis.count + "</b> rank combos, <b>" + vis.combos.toLocaleString() + "</b> card combos (" +
+      share.toFixed(1) + "% of " + scope + ")." + cut;
+    chips.forEach(function (chip) {
+      chip.setAttribute("aria-pressed", String(+chip.getAttribute("data-share") === state.share));
+    });
+  }
+
+  function renderDetail() {
+    var row = ROWS[state.selected];
+    document.getElementById("detail-hand").textContent = handText(row, state.pattern);
+    document.getElementById("detail-kind").textContent = handKind(row);
+    var isPair = row[0] === row[1] || row[1] === row[2];
+    var seen = [];
+    var lines = PATTERNS.filter(function (p) {
+      var cell = row[3][p.id];
+      if (!cell) return false;
+      if (isPair && p.id !== "avg") {
+        var key = cell.join(",");
+        if (seen.indexOf(key) >= 0) return false;
+        seen.push(key);
+      }
+      return true;
+    });
+    var cols = [["eqr", "vs random"], ["eqt", "vs top 20%"], ["pct", "top %"]];
+    var html = "<thead><tr><th>Pattern</th>" + cols.map(function (c) {
+      return "<th>" + c[1] + "</th>";
+    }).join("") + "<th>combos</th></tr></thead><tbody>";
+    lines.forEach(function (p) {
+      var cell = row[3][p.id];
+      var current = p.id === state.pattern || (isPair && state.pattern !== "avg" && p.id !== "avg" &&
+        row[3][state.pattern] && row[3][state.pattern].join(",") === cell.join(","));
+      html += "<tr" + (current ? ' class="current"' : "") + "><td>" + (p.id === "avg" ? "average" : handText(row, p.id)) + "</td>" +
+        cols.map(function (c) {
+          return "<td" + (c[0] === state.metric ? ' class="metric-col"' : "") + ">" + METRICS[c[0]].fmt(cell[METRICS[c[0]].index]).replace("top ", "") + "</td>";
+        }).join("") + "<td>" + cell[3] + "</td></tr>";
+    });
+    document.getElementById("detail-table").innerHTML = html + "</tbody>";
+    if (!row[3][state.pattern]) {
+      document.getElementById("detail-kind").textContent = handKind(row) + ". It cannot have this suit pattern.";
+    }
+  }
+
+  function renderTop(list) {
+    var m = METRICS[state.metric];
+    document.getElementById("top-list").innerHTML = list.slice(0, 10).map(function (x, k) {
+      return '<li><button type="button" data-row="' + x.i + '"><span class="rank">' + (k + 1) + '</span><span class="hand">' +
+        handText(ROWS[x.i], state.pattern) + '</span><span class="val">' + m.fmt(x.v) + "</span></button></li>";
+    }).join("");
+  }
+  document.getElementById("top-list").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-row]");
+    if (b) select(+b.getAttribute("data-row"));
+  });
+
+  function renderTable(list) {
+    var html = "<thead><tr><th>#</th><th>Hand</th><th>vs random</th><th>vs top 20%</th><th>Percentile</th><th>Combos</th></tr></thead><tbody>";
+    list.forEach(function (x, k) {
+      var cell = ROWS[x.i][3][state.pattern];
+      html += "<tr><td>" + (k + 1) + "</td><td>" + handText(ROWS[x.i], state.pattern) + "</td><td>" + pct1(cell[1]) + "</td><td>" +
+        pct1(cell[2]) + "</td><td>" + topShare(cell[0]) + "</td><td>" + cell[3] + "</td></tr>";
+    });
+    document.getElementById("full-table").innerHTML = html + "</tbody>";
+  }
+
+  // ---- 3D scene --------------------------------------------------------------------------
+  var viewport = document.getElementById("viewport");
+  var labelsEl = document.getElementById("labels");
+  var tooltip = document.getElementById("tooltip");
+  var gl = null;
+  var TARGET = { x: 7, y: 3.2, z: -6 };
+  var HOME = { theta: -0.46, phi: 1.0, radius: 31 };
+  var orbit = { theta: HOME.theta, phi: HOME.phi, radius: HOME.radius };
+  var RADIUS = 0.3;
+
+  // x = top card, y = bottom card, z = minus middle card, so ranks grow rightward and the tall corner sits at the back.
+  function position(row) { return { x: row[0], y: row[2], z: -row[1] }; }
+
+  function initGL() {
+    if (!window.THREE) return false;
+    var renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (err) {
+      return false;
+    }
+    if (!renderer.getContext()) return false;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    viewport.insertBefore(renderer.domElement, labelsEl);
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(38, 1, 0.1, 300);
+    scene.add(camera);
+    var ambient = new THREE.AmbientLight(0xffffff, 0.62);
+    var key = new THREE.DirectionalLight(0xffffff, 0.58);
+    key.position.set(6, 10, 8);
+    camera.add(key);
+    scene.add(ambient);
+
+    var mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(RADIUS, 20, 14),
+      new THREE.MeshLambertMaterial({ color: 0xffffff }), ROWS.length);
+    var color = new THREE.Color();
+    for (var i = 0; i < ROWS.length; i++) mesh.setColorAt(i, color.setRGB(0.5, 0.5, 0.5));
+    scene.add(mesh);
+
+    var ring = new THREE.Mesh(new THREE.SphereGeometry(RADIUS * 1.75, 18, 12),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.85 }));
+    scene.add(ring);
+
+    // Floor footprint: the triangle where middle card <= top card, one line per rank.
+    var floorY = -0.6, grid = [];
+    for (var r = 0; r <= 12; r++) {
+      grid.push(r, floorY, 0, r, floorY, -r);
+      grid.push(r, floorY, -r, 12, floorY, -r);
+    }
+    var gridGeo = new THREE.BufferGeometry();
+    gridGeo.setAttribute("position", new THREE.Float32BufferAttribute(grid, 3));
+    var gridLines = new THREE.LineSegments(gridGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
+    scene.add(gridLines);
+
+    var ax = 12.9, az0 = 0.9, axisPts = [
+      -0.4, floorY, az0, ax, floorY, az0,
+      ax, floorY, az0, ax, floorY, -12.9,
+      ax, floorY, -12.9, ax, 12.6, -12.9
+    ];
+    var axisGeo = new THREE.BufferGeometry();
+    axisGeo.setAttribute("position", new THREE.Float32BufferAttribute(axisPts, 3));
+    var axisLines = new THREE.LineSegments(axisGeo, new THREE.LineBasicMaterial({ color: 0xffffff }));
+    scene.add(axisLines);
+
+    var labels = [];
+    function addLabel(text, x, y, z, cls) {
+      var el = document.createElement("span");
+      el.className = cls;
+      el.textContent = text;
+      labelsEl.appendChild(el);
+      labels.push({ el: el, v: new THREE.Vector3(x, y, z) });
+    }
+    for (var t = 0; t <= 12; t++) {
+      addLabel(RANKS[t], t, floorY, az0 + 0.8, "tick");
+      addLabel(RANKS[t], ax + 0.8, floorY, -t, "tick");
+      addLabel(RANKS[t], ax + 0.7, t, -13.6, "tick");
+    }
+    addLabel("Top card", 6, floorY - 0.2, az0 + 2.2, "axis-title");
+    addLabel("Middle card", ax + 2.4, floorY - 0.2, -6, "axis-title");
+    addLabel("Bottom card", ax + 1.2, 13.6, -13.6, "axis-title");
+
+    gl = { renderer: renderer, scene: scene, camera: camera, mesh: mesh, ring: ring, grid: gridLines,
+           axis: axisLines, labels: labels, raycaster: new THREE.Raycaster(), matrix: new THREE.Matrix4(),
+           color: color, vec: new THREE.Vector3(), queued: false };
+    resize();
+    return true;
+  }
+
+  function applyTheme() {
+    readTokens();
+    if (!gl) return;
+    gl.grid.material.color.set(tokens["--grid"]);
+    gl.axis.material.color.set(tokens["--axis"]);
+    gl.ring.material.color.set(tokens["--accent"]);
+    paintPoints();
+  }
+
+  var visible = {};
+  function paintPoints() {
+    if (!gl) return;
+    var d = DOMAIN[state.metric], ghost = hexToRgb(tokens["--ghost"]);
+    for (var i = 0; i < ROWS.length; i++) {
+      var row = ROWS[i], v = value(row, state.pattern, state.metric), p = position(row);
+      var shown = v != null && visible[i];
+      var s = shown ? (i === state.hovered ? 1.35 : 1) : 0.32;
+      if (shown) {
+        var c = rampColor((v - d[0]) / (d[1] - d[0]));
+        gl.color.setRGB(c[0], c[1], c[2]);
+      } else {
+        gl.color.setRGB(ghost[0] / 255, ghost[1] / 255, ghost[2] / 255);
+      }
+      gl.mesh.setColorAt(i, gl.color);
+      gl.matrix.makeScale(s, s, s);
+      gl.matrix.setPosition(p.x, p.y, p.z);
+      gl.mesh.setMatrixAt(i, gl.matrix);
+    }
+    gl.mesh.instanceMatrix.needsUpdate = true;
+    gl.mesh.instanceColor.needsUpdate = true;
+    if (state.selected != null) {
+      var sp = position(ROWS[state.selected]);
+      gl.ring.position.set(sp.x, sp.y, sp.z);
+      gl.ring.visible = true;
+    } else {
+      gl.ring.visible = false;
+    }
+    requestRender();
+  }
+
+  function placeCamera() {
+    var c = gl.camera, o = orbit;
+    c.position.set(
+      TARGET.x + o.radius * Math.sin(o.phi) * Math.sin(o.theta),
+      TARGET.y + o.radius * Math.cos(o.phi),
+      TARGET.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta));
+    c.lookAt(TARGET.x, TARGET.y, TARGET.z);
+  }
+
+  function requestRender() {
+    if (!gl || gl.queued) return;
+    gl.queued = true;
+    requestAnimationFrame(function () {
+      gl.queued = false;
+      placeCamera();
+      gl.renderer.render(gl.scene, gl.camera);
+      var w = viewport.clientWidth, h = viewport.clientHeight;
+      gl.labels.forEach(function (l) {
+        gl.vec.copy(l.v).project(gl.camera);
+        var off = gl.vec.z > 1 || gl.vec.x < -1.1 || gl.vec.x > 1.1 || gl.vec.y < -1.1 || gl.vec.y > 1.1;
+        l.el.hidden = off;
+        if (!off) {
+          l.el.style.left = ((gl.vec.x + 1) / 2 * w) + "px";
+          l.el.style.top = ((1 - gl.vec.y) / 2 * h) + "px";
+        }
+      });
+    });
+  }
+
+  function resize() {
+    if (!gl) return;
+    var w = viewport.clientWidth, h = viewport.clientHeight;
+    gl.renderer.setSize(w, h, false);
+    gl.camera.aspect = w / Math.max(1, h);
+    gl.camera.updateProjectionMatrix();
+    requestRender();
+  }
+
+  function pick(clientX, clientY) {
+    if (!gl) return null;
+    var rect = viewport.getBoundingClientRect();
+    var ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+    gl.raycaster.setFromCamera(ndc, gl.camera);
+    var hits = gl.raycaster.intersectObject(gl.mesh);
+    for (var k = 0; k < hits.length; k++) {
+      var id = hits[k].instanceId;
+      if (id != null && visible[id] && value(ROWS[id], state.pattern, state.metric) != null) return id;
+    }
+    return null;
+  }
+
+  function showTooltip(id, clientX, clientY) {
+    if (id == null) { tooltip.hidden = true; return; }
+    var row = ROWS[id], cell = row[3][state.pattern];
+    tooltip.innerHTML = '<div class="hand">' + handText(row, state.pattern) + "</div>" +
+      '<div class="row"><span>vs random</span><b>' + pct1(cell[1]) + "</b></div>" +
+      '<div class="row"><span>vs top 20%</span><b>' + pct1(cell[2]) + "</b></div>" +
+      '<div class="row"><span>percentile</span><b>' + topShare(cell[0]) + "</b></div>";
+    tooltip.hidden = false;
+    var rect = viewport.getBoundingClientRect();
+    var x = clientX - rect.left + 14, y = clientY - rect.top + 14;
+    var tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    if (x + tw > rect.width - 8) x = clientX - rect.left - tw - 14;
+    if (y + th > rect.height - 8) y = clientY - rect.top - th - 14;
+    tooltip.style.left = Math.max(8, x) + "px";
+    tooltip.style.top = Math.max(8, y) + "px";
+  }
+
+  function setHovered(id) {
+    if (id === state.hovered) return;
+    state.hovered = id;
+    paintPoints();
+  }
+
+  function select(id) {
+    state.selected = id;
+    renderDetail();
+    paintPoints();
+  }
+
+  // ---- Orbit: drag to rotate, wheel or pinch to zoom, arrow keys too -------------------------
+  var pointers = new Map(), downAt = null, pinchStart = null;
+  function clampOrbit() {
+    orbit.phi = Math.max(0.18, Math.min(1.52, orbit.phi));
+    orbit.radius = Math.max(11, Math.min(70, orbit.radius));
+  }
+  viewport.addEventListener("pointerdown", function (e) {
+    if (!gl) return;
+    viewport.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    downAt = { x: e.clientX, y: e.clientY };
+    if (pointers.size === 2) {
+      var pts = Array.from(pointers.values());
+      pinchStart = { d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y), r: orbit.radius };
+    }
+  });
+  viewport.addEventListener("pointermove", function (e) {
+    if (!gl) return;
+    var prev = pointers.get(e.pointerId);
+    if (!prev) {
+      if (e.pointerType === "mouse") {
+        var id = pick(e.clientX, e.clientY);
+        setHovered(id);
+        showTooltip(id, e.clientX, e.clientY);
+      }
+      return;
+    }
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2 && pinchStart) {
+      var pts = Array.from(pointers.values());
+      var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      orbit.radius = pinchStart.r * pinchStart.d / Math.max(1, d);
+    } else if (pointers.size === 1) {
+      orbit.theta -= (e.clientX - prev.x) * 0.008;
+      orbit.phi -= (e.clientY - prev.y) * 0.008;
+      viewport.classList.add("dragging");
+      tooltip.hidden = true;
+    }
+    clampOrbit();
+    requestRender();
+  });
+  function endPointer(e) {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchStart = null;
+    viewport.classList.remove("dragging");
+    if (downAt && e.type === "pointerup" && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) {
+      var id = pick(e.clientX, e.clientY);
+      if (id != null) {
+        select(id);
+        showTooltip(id, e.clientX, e.clientY);
+      }
+    }
+    downAt = null;
+  }
+  viewport.addEventListener("pointerup", endPointer);
+  viewport.addEventListener("pointercancel", endPointer);
+  viewport.addEventListener("pointerleave", function (e) {
+    if (e.pointerType === "mouse" && !pointers.size) { tooltip.hidden = true; setHovered(null); }
+  });
+  viewport.addEventListener("wheel", function (e) {
+    if (!gl) return;
+    e.preventDefault();
+    orbit.radius *= Math.exp(e.deltaY * 0.0012);
+    clampOrbit();
+    requestRender();
+  }, { passive: false });
+  viewport.addEventListener("keydown", function (e) {
+    if (!gl) return;
+    var step = 0.08, used = true;
+    if (e.key === "ArrowLeft") orbit.theta += step;
+    else if (e.key === "ArrowRight") orbit.theta -= step;
+    else if (e.key === "ArrowUp") orbit.phi -= step;
+    else if (e.key === "ArrowDown") orbit.phi += step;
+    else if (e.key === "+" || e.key === "=") orbit.radius *= 0.9;
+    else if (e.key === "-") orbit.radius *= 1.1;
+    else used = false;
+    if (used) { e.preventDefault(); clampOrbit(); requestRender(); }
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    orbit.theta = HOME.theta; orbit.phi = HOME.phi; orbit.radius = HOME.radius;
+    requestRender();
+  });
+
+  // ---- Wiring ----------------------------------------------------------------------------------
+  function update() {
+    var list = ranked();
+    var vis = visibility(list);
+    visible = vis.shown;
+    if (state.selected == null || !ROWS[state.selected][3][state.pattern]) state.selected = list.length ? list[0].i : 0;
+    renderLegend(vis);
+    renderDetail();
+    renderTop(list);
+    renderTable(list);
+    paintPoints();
+  }
+
+  readTokens();
+  if (!initGL()) {
+    var fb = document.createElement("div");
+    fb.className = "fallback";
+    fb.textContent = "The 3D view needs WebGL, which this browser has turned off. Every hand is listed in the table below.";
+    viewport.appendChild(fb);
+    document.getElementById("hint").hidden = true;
+  } else {
+    applyTheme();
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(viewport);
+    else window.addEventListener("resize", resize);
+  }
+  update();
+
+  var darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener("change", applyTheme);
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
