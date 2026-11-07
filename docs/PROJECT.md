@@ -22,6 +22,8 @@ A bot for the NO LIMIT '26 tournament: a Python `Agent` whose `act(state, memory
   git-tracked copy of the build machine's `~/work` (no venvs, no files over 5 MB, no `first_bot`
   backup). The build machine stays the place to work; pull it down at checkpoints with
   `rsync -a --max-size=5m --exclude=.venv --exclude=__pycache__ --exclude=first_bot.bak-20261106 --exclude=times.log no-limit-2026-build:work/{bots,analysis,sim,legacy,REFACTOR.md} .`
+  `CLAUDE.md` at the project root imports `REFACTOR.md`, so every Claude Code session here starts
+  with the layout and its rules.
 - **This computer**: API key in `~/.config/no-limit-2026/api-key`; SSH alias in `~/.ssh/config`
   using `~/.ssh/runpod`; setup skill at `~/.claude/skills/no-limit-2026-setup/SKILL.md`.
 
@@ -204,3 +206,14 @@ machine), and `export_rows.py` writes the row files the "Bot leak map" dashboard
 local practice round (`~/work/analysis/hh/practice_*.jsonl.gz`: our two uploads, the kit's examples
 and two deliberately leaky stand-ins in `~/work/sim/sim_bots`). The competition API exposes no
 hand-history link, so a real round's file has to come from the round page.
+
+### Exploit rules handoff (event night, after practice round 3)
+
+`analysis/exploit_rules/README.md` and `rules.json` turn the leak analysis into rules a bot
+builder can follow directly: spot keys computed from the game state, MDF and pot-odds formulas,
+bluff spots where the field overfolds, call thresholds from EM and river showdowns, equity
+tables by hand bucket, the `hand_analyzer` report's findings converted to preflop, value-bet and
+exposed-card rules, and concrete changes from V7 to V8. `pineapple_em.rules` regenerates the
+tables after each round. The fold-through numbers before this point were wrong: bets that made
+everyone fold were dropped from the count, so every bluff looked unprofitable. Fixed in
+`history.py`/`tree.py`. The leak map now shows practice round 3 (first 1,000 tables).

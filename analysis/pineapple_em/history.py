@@ -70,6 +70,7 @@ class Bet:
     increment: int
     responders: set
     hero_responds: bool
+    faced_by: frozenset = frozenset()
     outcome: str = "open"
     callers: set = field(default_factory=set)
 
@@ -199,7 +200,7 @@ def replay_hand(hand, hero_seat, fillers, hero_cards):
                     responders = {s for s in in_hand if s != seat and stacks[s] > 0}
                     all_bets.append(Bet(street, seat, population(seat), node, path, size,
                                         pot_before + to_call, increment, set(responders),
-                                        hero_seat in responders))
+                                        hero_seat in responders, frozenset(responders)))
                 token = ("B" if decision.node.split("|")[3] in ("first", "checked-to") else "R") + size
             for bet in open_bets:
                 if bet.outcome == "open" and seat in bet.responders:

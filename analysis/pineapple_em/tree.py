@@ -62,7 +62,7 @@ class TreeStats:
                 self.hu_tree_actor[key] = (d.position, d.street)
         board = replay.board
         for bet in replay.bets:
-            if not bet.hero_responds and bet.responders | bet.callers:
+            if not bet.hero_responds and bet.faced_by:
                 s = bet.increment / max(bet.pot, 1)
                 won = bet.outcome == "folded"
                 self.bet_results[(bet.node, bet.size)].append((won, s))
